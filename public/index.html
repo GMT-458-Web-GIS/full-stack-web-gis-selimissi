@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ready for Departure - GeoGame</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <video autoplay muted loop id="bg-video" poster="https://selimissi.github.io/geogame-assets/video-poster.jpg">
+        <source src="https://selimissi.github.io/geogame-assets/airplane-flying.mp4" type="video/mp4">
+        Tarayıcınız video etiketini desteklemiyor.
+    </video>
+    <div class="video-overlay"></div>
+
+
+    <div id="start-screen" class="overlay-screen">
+        <div class="glass-panel start-panel">
+            <h1 class="game-title"><i class="fa-solid fa-plane-departure"></i> READY FOR DEPARTURE</h1>
+            <h2 class="game-subtitle">Küresel Yön Bulma Mücadelesi</h2>
+            
+            <div class="rules-container">
+                <div class="rule-item">
+                    <i class="fa-solid fa-earth-americas rule-icon"></i>
+                    <p>Dünyanın dev havalimanlarından kalkış yap.</p>
+                </div>
+                <div class="rule-item">
+                    <i class="fa-solid fa-compass rule-icon"></i>
+                    <p>Hedef şehre giden doğru <strong>PİSTİ</strong> seç.</p>
+                </div>
+                <div class="rule-item">
+                    <i class="fa-solid fa-stopwatch rule-icon"></i>
+                    <p>Süren <strong>90 SANİYE</strong>.</p>
+                </div>
+                <div class="scoring-info">
+                    <span><i class="fa-solid fa-circle-check success-color"></i> +10 Puan</span>
+                    <span><i class="fa-solid fa-circle-xmark error-color"></i> -5 Puan</span>
+                </div>
+            </div>
+            
+            <button id="start-button" class="pulse-button">
+                <i class="fa-solid fa-play"></i> OYUNA BAŞLA
+            </button>
+        </div>
+    </div>
+
+
+    <div id="game-container">
+        <div class="glass-header">
+            <div class="info-box departure-box">
+                <i class="fa-solid fa-plane-up"></i>
+                <span id="departure-display">KALKIŞ: ...</span>
+            </div>
+            <div class="info-box target-box">
+                <i class="fa-solid fa-location-crosshairs"></i>
+                <span id="target-display">HEDEF: ...</span>
+            </div>
+            <div class="stats-container">
+                <div class="stat-box score-box">
+                    <i class="fa-solid fa-star"></i>
+                    <span id="score">0</span>
+                </div>
+                <div class="stat-box time-box">
+                    <i class="fa-regular fa-clock"></i>
+                    <span id="time">90</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+
+    <div id="game-over-screen" class="overlay-screen hidden">
+        <div class="glass-panel game-over-panel">
+            <h1><i class="fa-solid fa-flag-checkered"></i> OYUN BİTTİ!</h1>
+            <h2>Süre Doldu, Pilot.</h2>
+            
+            <div class="final-score-container">
+                <p>TOPLAM SKORUN</p>
+                <span id="final-score" class="big-score">0</span>
+            </div>
+            
+            <button id="restart-button" class="pulse-button" onclick="location.reload()">
+                <i class="fa-solid fa-rotate-right"></i> TEKRAR OYNA
+            </button>
+        </div>
+    </div>
+
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
+    <script src="game.js"></script>
+
+</body>
+</html>
