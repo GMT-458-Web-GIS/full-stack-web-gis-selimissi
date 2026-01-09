@@ -1,14 +1,28 @@
+require('dotenv').config(); // Gizli .env dosyasındaki şifreyi okur
 const express = require('express');
-const path = require('path');
+const mongoose = require('mongoose');
 const cors = require('cors');
+
+const path = require('path');
+
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware (Araçlar)
-app.use(cors()); // Farklı kaynaklardan erişime izin ver
-app.use(express.json()); // JSON verilerini okuyabilmemizi sağlar
-app.use(express.static(path.join(__dirname, 'public'))); // 'public' klasöründeki dosyaları sun
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/api/auth', authRoutes);
+
+// --- MONGODB BAĞLANTISI ---
+console.log('Veritabanına bağlanılıyor...');
+
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('✅ MongoDB Bağlantısı BAŞARILI!'))
+    .catch((err) => console.error('❌ MongoDB Bağlantı Hatası:', err));
 
 // Ana Sayfa Rotası
 app.get('/', (req, res) => {
