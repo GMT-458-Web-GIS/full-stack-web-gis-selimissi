@@ -12,16 +12,8 @@ const UserSchema = new mongoose.Schema({
     },
     role: { 
         type: String, 
-        enum: ['student', 'teacher', 'admin'], 
-        default: 'student' 
-    },
-    highScore: { 
-        type: Number, 
-        default: 0 
-    },
-    createdAt: { 
-        type: Date, 
-        default: Date.now 
+        enum: ['user', 'admin'], // Sadece bu ikisi var artık. Misafir zaten veritabanına girmiyor.
+        default: 'user' 
     }
 });
 

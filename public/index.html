@@ -6,6 +6,7 @@
     <title>Ready for Departure - WebGIS Game</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 </head>
 <body>
 
@@ -17,29 +18,69 @@
             <input type="text" id="username" placeholder="Kullanıcı Adı">
             <input type="password" id="password" placeholder="Şifre">
             
+            <select id="role" style="width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; background: white;">
+                <option value="user">👤 Normal Oyuncu</option>
+                <option value="admin">🔧 Yönetici (Admin)</option>
+            </select>
+
             <div class="buttons">
                 <button onclick="login()" class="btn-primary">Giriş Yap</button>
                 <button onclick="register()" class="btn-secondary">Kayıt Ol</button>
             </div>
+
+            <button onclick="playAsGuest()" style="width: 100%; padding: 12px; margin-top: 10px; background-color: #f39c12; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                👻 Üye Olmadan Oyna (Misafir)
+            </button>
+
             <p id="auth-message"></p>
         </div>
     </div>
 
-    <div id="game-container" style="display: none;">
+    <div id="game-container">
         <div id="info-panel">
-        <h3>Uçuş Bilgileri</h3>
-        <p>Oyuncu: <span id="player-name">Misafir</span></p>
-        
-        <p id="departure-display" style="font-weight: bold; color: #2980b9;">Kalkış: ...</p>
-        <p id="target-display" style="font-weight: bold; color: #c0392b;">Hedef: ...</p>
-        
-        <p>Puan: <span id="score">0</span></p>
-        <p>Kalan Süre: <span id="time">60</span></p>
-        
-        <div id="feedback" class="feedback"></div>
+            <h3>Uçuş Bilgileri</h3>
+            <p>Oyuncu: <span id="player-name">Misafir</span></p>
+            <p id="departure-display" style="font-weight: bold; color: #2980b9;">Kalkış: ...</p>
+            <p id="target-display" style="font-weight: bold; color: #c0392b;">Hedef: ...</p>
+            <p>Puan: <span id="score">0</span></p>
+            <p>Kalan Süre: <span id="time">60</span></p>
+            <div id="feedback" class="feedback"></div>
+        </div>
+        <div id="map"></div>
+
+        <div id="tutorial-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-box" style="max-width: 500px;"> 
+                <h2>🎮 Nasıl Oynanır?</h2>
+                <div style="text-align: left; margin: 20px 0; color: #34495e; font-size: 1.1rem;">
+                    <p>👨‍✈️ <b>Görev:</b> Uçağı hedef şehre en kısa yoldan göndermek.</p>
+                    <p>🧭 <b>Mekanik:</b> Haritadaki mavi oklar (pist yönleri) farklı açılara bakar.</p>
+                    <p>🎯 <b>Amaç:</b> Hedef şehre (Kırmızı Pin) doğru giden <b>en uygun pisti (oku)</b> seçmelisin.</p>
+                    <p>⚠️ <b>Dikkat:</b> Dünya yuvarlaktır! En kısa yol bazen düz bir çizgi gibi görünmeyebilir.</p>
+                </div>
+                <button onclick="closeTutorialAndStart()" class="btn-primary">Anlaşıldı, Başlat! 🚀</button>
+            </div>
+        </div>
+
+        <div id="game-over-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-box">
+                <h2>🏁 Uçuş Tamamlandı!</h2>
+                <p>Toplam Skorun:</p>
+                <h1 id="final-score-display">0</h1>
+                
+                <p id="guest-warning" style="color: #e74c3c; display: none; font-size: 0.9rem; margin-top: -10px; margin-bottom: 15px;">
+                    (Misafir olduğunuz için skorunuz kaydedilmedi)
+                </p>
+
+                <div class="modal-buttons">
+                    <button onclick="location.reload()" class="btn-primary">Tekrar Oyna</button>
+                    <button class="btn-secondary" disabled>Liderlik Tablosu (Yakında)</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
     <script src="game.js"></script>
 </body>
 </html>

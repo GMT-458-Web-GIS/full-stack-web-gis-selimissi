@@ -3,9 +3,13 @@
 // ==========================================
 const API_URL = 'http://localhost:3000/api/auth';
 
+// Kullanıcının rolünü globalde tutalım (user, admin, guest)
+window.currentUserRole = 'guest'; 
+
 async function register() {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
+    const role = document.getElementById('role').value; // <--- YENİ: Rol bilgisini al
     const msg = document.getElementById('auth-message');
 
     if (!username || !password) {
@@ -17,7 +21,7 @@ async function register() {
         const res = await fetch(`${API_URL}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, role }) // <--- YENİ: Rolü sunucuya gönder
         });
         const data = await res.json();
         
@@ -50,12 +54,19 @@ async function login() {
             // Giriş Başarılı!
             document.getElementById('auth-panel').style.display = 'none'; 
             document.getElementById('game-container').style.display = 'block'; 
-            document.getElementById('player-name').innerText = data.username;
             
-            // Haritayı güncelle ve oyunu başlat
+            // --- YENİ: ROLÜ KAYDET VE İSMİ GÖSTER ---
+            window.currentUserRole = data.role; // Rolü global değişkene at
+            
+            let roleDisplay = "";
+            if(data.role === 'admin') roleDisplay = " (Admin 🔧)";
+            
+            document.getElementById('player-name').innerText = data.username + roleDisplay;
+            
+            // Harita boyutunu güncelle ve NASIL OYNANIR ekranını aç
             setTimeout(() => { 
-                map.invalidateSize(); 
-                window.startGame(); 
+                if(map) map.invalidateSize(); 
+                document.getElementById('tutorial-modal').style.display = 'flex';
             }, 100);
             
         } else {
@@ -68,19 +79,29 @@ async function login() {
     }
 }
 
+// --- YENİ: MİSAFİR MODU FONKSİYONU ---
+window.playAsGuest = function() {
+    // 1. Giriş ekranını kapat
+    document.getElementById('auth-panel').style.display = 'none';
+    document.getElementById('game-container').style.display = 'block';
+
+    // 2. Rolü ve İsmi Ayarla
+    window.currentUserRole = 'guest'; 
+    document.getElementById('player-name').innerText = "Misafir Oyuncu 👻";
+
+    // 3. Eğitimi Aç (Login ile aynı akış)
+    setTimeout(() => { 
+        if(map) map.invalidateSize(); 
+        document.getElementById('tutorial-modal').style.display = 'flex';
+    }, 100);
+};
+
 // ==========================================
 // 2. OYUN AYARLARI VE GLOBAL DEĞİŞKENLER
 // ==========================================
 
-// Haritayı en başta oluşturuyoruz
-let map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
-L.control.zoom({ position: 'topright' }).addTo(map);
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 18,
-    attribution: 'Tiles &copy; Esri'
-}).addTo(map);
-
-const GAME_DURATION = 90; 
+let map; // Haritayı burada tanımlıyoruz ama henüz oluşturmuyoruz!
+const GAME_DURATION = 90; // Varsayılan süre (StartGame'de değişecek)
 const SCORE_CORRECT = 10;
 const SCORE_WRONG = 5;
 const FEEDBACK_DELAY = 1000; 
@@ -97,7 +118,7 @@ let timerInterval = null;
 let isProcessingAnswer = false;
 
 // ==========================================
-// 3. VERİ SETLERİ (TAM LİSTE GERİ GELDİ ✅)
+// 3. VERİ SETLERİ
 // ==========================================
 
 const airports = [
@@ -115,15 +136,12 @@ const airports = [
 ];
 
 const targets = [
-    // Asya
     { name: "Tokyo", coords: [35.549, 139.779] }, 
     { name: "Beijing", coords: [40.079, 116.603] },
     { name: "Mumbai", coords: [19.089, 72.865] }, 
     { name: "Bangkok", coords: [13.690, 100.750] },
     { name: "Seoul", coords: [37.460, 126.440] },
     { name: "Jakarta", coords: [-6.127, 106.655] },
-
-    // Avrupa
     { name: "London", coords: [51.470, -0.454] },
     { name: "Paris", coords: [49.009, 2.556] }, 
     { name: "Berlin", coords: [52.366, 13.503] }, 
@@ -133,34 +151,24 @@ const targets = [
     { name: "İstanbul", coords: [41.275, 28.742] }, 
     { name: "Ankara", coords: [40.128, 32.995] }, 
     { name: "Zagreb", coords: [45.740, 16.068] }, 
-
-    // Kuzey Amerika
     { name: "New York", coords: [40.641, -73.778] }, 
     { name: "Los Angeles", coords: [33.941, -118.408] }, 
     { name: "Chicago", coords: [41.974, -87.907] }, 
     { name: "Toronto", coords: [43.677, -79.624] }, 
     { name: "Mexico City", coords: [19.436, -99.072] }, 
     { name: "Vancouver", coords: [49.194, -123.177] }, 
-
-    // Güney Amerika
     { name: "Rio de Janeiro", coords: [-22.813, -43.249] }, 
     { name: "São Paulo", coords: [-23.432, -46.469] }, 
     { name: "Buenos Aires", coords: [-34.815, -58.534] }, 
     { name: "Medellin", coords: [6.164, -75.423] }, 
     { name: "Bogotá", coords: [4.701, -74.146] }, 
-
-    // Afrika
     { name: "Cairo", coords: [30.111, 31.406] }, 
     { name: "Cape Town", coords: [-33.971, 18.602] }, 
     { name: "Nairobi", coords: [-1.319, 36.927] }, 
     { name: "Casablanca", coords: [33.367, -7.589] }, 
-
-    // Okyanusya
     { name: "Sydney", coords: [-33.939, 151.175] }, 
     { name: "Melbourne", coords: [-37.663, 144.844] }, 
     { name: "Auckland", coords: [-37.008, 174.791] }, 
-    
-    // Orta Doğu
     { name: "Dubai", coords: [25.253, 55.365] }, 
     { name: "Riyadh", coords: [24.957, 46.698] }, 
     { name: "Tehran", coords: [35.416, 51.159] }, 
@@ -178,6 +186,11 @@ function getAngleDifference(angle1, angle2) {
 }
 
 function calculateCorrectBearing(startCoords, endCoords) {
+    // Turf.js yüklendi mi kontrolü
+    if (typeof turf === 'undefined') {
+        alert("HATA: Turf.js kütüphanesi yüklenemedi! İnternet bağlantınızı kontrol edin.");
+        return 0;
+    }
     const startPoint = turf.point([startCoords[1], startCoords[0]]);
     const endPoint = turf.point([endCoords[1], endCoords[0]]);
     let bearing = turf.bearing(startPoint, endPoint);
@@ -185,14 +198,21 @@ function calculateCorrectBearing(startCoords, endCoords) {
     return bearing;
 }
 
-// --- BU FONKSİYON `login` TARAFINDAN ÇAĞRILACAK ---
+// --- OYUN BAŞLATMA ---
 window.startGame = function() {
     console.log("Oyun Başlatılıyor...");
     gameActive = true;
     score = 0;
-    timeLeft = GAME_DURATION;
 
-    // Skor ve süreyi sıfırla
+    // --- YENİ: ROL TABANLI SÜRE AYARI ---
+    if (window.currentUserRole === 'admin') {
+        timeLeft = 9999;  // Admin: Sınırsız
+    } else if (window.currentUserRole === 'user') {
+        timeLeft = 90;    // Kayıtlı User: 1.5 Dakika
+    } else {
+        timeLeft = 60;    // Misafir: 1 Dakika
+    }
+
     document.getElementById('score').innerText = score;
     const timeDisplay = document.getElementById('time');
     if(timeDisplay) {
@@ -223,15 +243,23 @@ function startTimer() {
 function endGame() {
     gameActive = false;
     clearInterval(timerInterval);
-    // document.getElementById('game-container').style.display = 'none'; // İstersen kapatabilirsin
-    alert("Süre Doldu! Skorun: " + score + "\nYeniden başlamak için sayfayı yenileyin.");
+    
+    document.getElementById('final-score-display').innerText = score;
+
+    // --- YENİ: MİSAFİR UYARISINI GÖSTER/GİZLE ---
+    if (window.currentUserRole === 'guest') {
+        document.getElementById('guest-warning').style.display = 'block';
+    } else {
+        document.getElementById('guest-warning').style.display = 'none';
+    }
+
+    document.getElementById('game-over-modal').style.display = 'flex';
 }
 
 function checkAnswer(selectedHeading, selectedMarkerElement) {
     if (!gameActive || isProcessingAnswer) return;
     isProcessingAnswer = true;
     
-    // Doğru açıyı bul
     let minDifference = 360;
     let bestHeading = -1;
     currentDeparture.runways.forEach(runway => {
@@ -252,7 +280,6 @@ function checkAnswer(selectedHeading, selectedMarkerElement) {
         score -= SCORE_WRONG;
         if (selectedMarkerElement) selectedMarkerElement.querySelector('.runway-arrow').classList.add('wrong');
         
-        // Doğru olanı göster
         arrowMarkers.forEach(marker => {
             if (marker.headingData === bestHeading) {
                 const el = marker.getElement();
@@ -272,7 +299,6 @@ function checkAnswer(selectedHeading, selectedMarkerElement) {
 function startNewRound() {
     if (!gameActive) return;
 
-    // Temizlik
     arrowMarkers.forEach(marker => map.removeLayer(marker));
     arrowMarkers = [];
     if (targetMarker) {
@@ -280,7 +306,6 @@ function startNewRound() {
         targetMarker = null;
     }
 
-    // Yeni Rota Seçimi
     currentDeparture = airports[getRandomInt(airports.length)];
     do {
         currentTarget = targets[getRandomInt(targets.length)];
@@ -289,24 +314,19 @@ function startNewRound() {
         currentDeparture.coords[1] === currentTarget.coords[1]
     );
 
-    // Ekrana Yaz
     const depDisplay = document.getElementById('departure-display');
     const tarDisplay = document.getElementById('target-display');
     
     if(depDisplay) depDisplay.innerText = `Kalkış: ${currentDeparture.name}`;
     if(tarDisplay) tarDisplay.innerText = `Hedef: ${currentTarget.name}`;
     
-    // Haritayı Odakla
     map.flyTo(currentDeparture.coords, currentDeparture.zoom, { animate: true, duration: 1.5 });
     
-    // Hedef Pinini Koy
     targetMarker = L.marker(currentTarget.coords).addTo(map)
         .bindPopup(`<b>Hedef:</b> ${currentTarget.name}`);
 
-    // Doğru Açıyı Hesapla
     correctBearing = calculateCorrectBearing(currentDeparture.coords, currentTarget.coords);
 
-    // Pist Oklarını Çiz
     currentDeparture.runways.forEach(runway => {
         const arrowHtml = `<i class="fa-solid fa-arrow-up arrow-icon" style="transform: rotate(${runway.heading}deg);"></i>`;
         const icon = L.divIcon({
@@ -322,3 +342,24 @@ function startNewRound() {
         arrowMarkers.push(marker);
     });
 }
+
+// ==========================================
+// 5. SAYFA YÜKLENİNCE HARİTAYI KUR (ÖNEMLİ KISIM)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Haritayı "Güvenli" bir şekilde oluştur
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        attribution: 'Tiles &copy; Esri'
+    }).addTo(map);
+
+    console.log("Harita başarıyla oluşturuldu.");
+});
+
+// --- YENİ: EĞİTİM EKRANINI KAPAT VE OYUNU BAŞLAT ---
+window.closeTutorialAndStart = function() {
+    document.getElementById('tutorial-modal').style.display = 'none'; // Ekranı kapat
+    window.startGame(); // Asıl oyunu şimdi başlat
+};
