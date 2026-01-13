@@ -2,109 +2,83 @@
 // 1. KİMLİK DOĞRULAMA (AUTH) SİSTEMİ
 // ==========================================
 const API_URL = 'http://localhost:3000/api/auth';
-
-// Kullanıcının rolünü globalde tutalım (user, admin, guest)
 window.currentUserRole = 'guest'; 
 
-async function register() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value; // <--- YENİ: Rol bilgisini al
-    const msg = document.getElementById('auth-message');
+// --- HARİTA BAŞLATMA ---
+function initializeMap() {
+    if (map) { map.remove(); map = null; }
+    console.log("Harita oluşturuluyor...");
+    
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18, attribution: 'Tiles &copy; Esri'
+    }).addTo(map);
+    
+    setTimeout(() => { map.invalidateSize(); }, 200);
+}
 
-    if (!username || !password) {
-        msg.innerText = "Lütfen tüm alanları doldurun!";
-        return;
-    }
+// --- KAYIT & GİRİŞ ---
+async function register() {
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
+    const msg = document.getElementById('auth-message');
+    if (!u || !p) { msg.innerText = "Alanları doldurun!"; return; }
 
     try {
         const res = await fetch(`${API_URL}/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, role }) // <--- YENİ: Rolü sunucuya gönder
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
         });
-        const data = await res.json();
-        
-        if (res.ok) {
-            msg.style.color = 'green';
-            msg.innerText = "Kayıt Başarılı! Şimdi giriş yapın.";
-        } else {
-            msg.style.color = 'red';
-            msg.innerText = data.message;
-        }
-    } catch (err) {
-        msg.innerText = "Bağlantı hatası!";
-    }
+        const d = await res.json();
+        msg.style.color = res.ok ? 'green' : 'red';
+        msg.innerText = d.message;
+    } catch (e) { msg.innerText = "Bağlantı hatası!"; }
 }
 
 async function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
     const msg = document.getElementById('auth-message');
 
     try {
         const res = await fetch(`${API_URL}/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
         });
-        const data = await res.json();
+        const d = await res.json();
 
         if (res.ok) {
-            // Giriş Başarılı!
-            document.getElementById('auth-panel').style.display = 'none'; 
-            document.getElementById('game-container').style.display = 'block'; 
+            document.getElementById('auth-panel').style.display = 'none';
+            window.currentUserRole = d.role;
+            let roleTxt = (d.role === 'admin') ? " (Admin 🔧)" : "";
+            document.getElementById('player-name').innerText = d.username + roleTxt;
             
-            // --- YENİ: ROLÜ KAYDET VE İSMİ GÖSTER ---
-            window.currentUserRole = data.role; // Rolü global değişkene at
-            
-            let roleDisplay = "";
-            if(data.role === 'admin') roleDisplay = " (Admin 🔧)";
-            
-            document.getElementById('player-name').innerText = data.username + roleDisplay;
-            
-            // Harita boyutunu güncelle ve NASIL OYNANIR ekranını aç
-            setTimeout(() => { 
-                if(map) map.invalidateSize(); 
-                document.getElementById('tutorial-modal').style.display = 'flex';
-            }, 100);
-            
+            initializeMap(); // Haritayı başlat
+            setTimeout(() => { document.getElementById('tutorial-modal').style.display = 'flex'; }, 500);
         } else {
             msg.style.color = 'red';
-            msg.innerText = data.message;
+            msg.innerText = d.message;
         }
-    } catch (err) {
-        console.error(err);
-        msg.innerText = "Sunucuya bağlanılamadı!";
-    }
+    } catch (e) { msg.innerText = "Sunucuya bağlanılamadı!"; }
 }
 
-// --- YENİ: MİSAFİR MODU FONKSİYONU ---
 window.playAsGuest = function() {
-    // 1. Giriş ekranını kapat
     document.getElementById('auth-panel').style.display = 'none';
-    document.getElementById('game-container').style.display = 'block';
-
-    // 2. Rolü ve İsmi Ayarla
-    window.currentUserRole = 'guest'; 
+    window.currentUserRole = 'guest';
     document.getElementById('player-name').innerText = "Misafir Oyuncu 👻";
-
-    // 3. Eğitimi Aç (Login ile aynı akış)
-    setTimeout(() => { 
-        if(map) map.invalidateSize(); 
-        document.getElementById('tutorial-modal').style.display = 'flex';
-    }, 100);
+    initializeMap();
+    setTimeout(() => { document.getElementById('tutorial-modal').style.display = 'flex'; }, 500);
 };
 
 // ==========================================
-// 2. OYUN AYARLARI VE GLOBAL DEĞİŞKENLER
+// 2. OYUN DEĞİŞKENLERİ
 // ==========================================
-
-let map; // Haritayı burada tanımlıyoruz ama henüz oluşturmuyoruz!
-const GAME_DURATION = 90; // Varsayılan süre (StartGame'de değişecek)
+let map = null;
+const GAME_DURATION = 90; 
 const SCORE_CORRECT = 10;
 const SCORE_WRONG = 5;
-const FEEDBACK_DELAY = 1000; 
+const FEEDBACK_DELAY = 1000; // 1 Saniye bekleme
 
 let currentDeparture = null;
 let currentTarget = null;
@@ -120,7 +94,6 @@ let isProcessingAnswer = false;
 // ==========================================
 // 3. VERİ SETLERİ
 // ==========================================
-
 const airports = [
     { code: "KORD", name: "Chicago", coords: [41.974, -87.907], zoom: 12, runways: [{ coords: [42.0079, -87.8835], heading: 40 }, { coords: [41.9550, -87.9420], heading: 220 }, { coords: [41.9820, -87.8720], heading: 90 }, { coords: [41.9820, -87.9460], heading: 270 }] },
     { code: "EHAM", name: "Amsterdam", coords: [52.308, 4.768], zoom: 12, runways: [{ coords: [52.3263, 4.7812], heading: 3 }, { coords: [52.2904, 4.7774], heading: 183 }, { coords: [52.3186, 4.7999], heading: 86 }, { coords: [52.3163, 4.7401], heading: 266 }, { coords: [52.3054, 4.7794], heading: 59 }, { coords: [52.2862, 4.7295], heading: 239 }] },
@@ -134,92 +107,49 @@ const airports = [
     { code: "KJFK", name: "New York", coords: [40.641, -73.778], zoom: 13, runways: [{ coords: [40.6545, -73.7609], heading: 31 }, { coords: [40.6187, -73.7888], heading: 211 }, { coords: [40.6255, -73.7660], heading: 120 }, { coords: [40.6520, -73.8246], heading: 300 }] },
     { code: "SBGR", name: "Sao Paulo", coords: [-23.432, -46.469], zoom: 13, runways: [{ coords: [-23.4235, -46.4430], heading: 73 }, { coords: [-23.4358, -46.4910], heading: 254 }] },
 ];
-
 const targets = [
-    { name: "Tokyo", coords: [35.549, 139.779] }, 
-    { name: "Beijing", coords: [40.079, 116.603] },
-    { name: "Mumbai", coords: [19.089, 72.865] }, 
-    { name: "Bangkok", coords: [13.690, 100.750] },
-    { name: "Seoul", coords: [37.460, 126.440] },
-    { name: "Jakarta", coords: [-6.127, 106.655] },
-    { name: "London", coords: [51.470, -0.454] },
-    { name: "Paris", coords: [49.009, 2.556] }, 
-    { name: "Berlin", coords: [52.366, 13.503] }, 
-    { name: "Madrid", coords: [40.483, -3.567] }, 
-    { name: "Rome", coords: [41.799, 12.246] }, 
-    { name: "Moscow", coords: [55.972, 37.414] }, 
-    { name: "İstanbul", coords: [41.275, 28.742] }, 
-    { name: "Ankara", coords: [40.128, 32.995] }, 
-    { name: "Zagreb", coords: [45.740, 16.068] }, 
-    { name: "New York", coords: [40.641, -73.778] }, 
-    { name: "Los Angeles", coords: [33.941, -118.408] }, 
-    { name: "Chicago", coords: [41.974, -87.907] }, 
-    { name: "Toronto", coords: [43.677, -79.624] }, 
-    { name: "Mexico City", coords: [19.436, -99.072] }, 
-    { name: "Vancouver", coords: [49.194, -123.177] }, 
-    { name: "Rio de Janeiro", coords: [-22.813, -43.249] }, 
-    { name: "São Paulo", coords: [-23.432, -46.469] }, 
-    { name: "Buenos Aires", coords: [-34.815, -58.534] }, 
-    { name: "Medellin", coords: [6.164, -75.423] }, 
-    { name: "Bogotá", coords: [4.701, -74.146] }, 
-    { name: "Cairo", coords: [30.111, 31.406] }, 
-    { name: "Cape Town", coords: [-33.971, 18.602] }, 
-    { name: "Nairobi", coords: [-1.319, 36.927] }, 
-    { name: "Casablanca", coords: [33.367, -7.589] }, 
-    { name: "Sydney", coords: [-33.939, 151.175] }, 
-    { name: "Melbourne", coords: [-37.663, 144.844] }, 
-    { name: "Auckland", coords: [-37.008, 174.791] }, 
-    { name: "Dubai", coords: [25.253, 55.365] }, 
-    { name: "Riyadh", coords: [24.957, 46.698] }, 
-    { name: "Tehran", coords: [35.416, 51.159] }, 
+    { name: "Tokyo", coords: [35.549, 139.779] }, { name: "Beijing", coords: [40.079, 116.603] },
+    { name: "Mumbai", coords: [19.089, 72.865] }, { name: "Bangkok", coords: [13.690, 100.750] },
+    { name: "Seoul", coords: [37.460, 126.440] }, { name: "Jakarta", coords: [-6.127, 106.655] },
+    { name: "London", coords: [51.470, -0.454] }, { name: "Paris", coords: [49.009, 2.556] }, 
+    { name: "Berlin", coords: [52.366, 13.503] }, { name: "Madrid", coords: [40.483, -3.567] }, 
+    { name: "Rome", coords: [41.799, 12.246] }, { name: "Moscow", coords: [55.972, 37.414] }, 
+    { name: "İstanbul", coords: [41.275, 28.742] }, { name: "Ankara", coords: [40.128, 32.995] }, 
+    { name: "New York", coords: [40.641, -73.778] }, { name: "Los Angeles", coords: [33.941, -118.408] }, 
+    { name: "Chicago", coords: [41.974, -87.907] }, { name: "Rio de Janeiro", coords: [-22.813, -43.249] }, 
+    { name: "São Paulo", coords: [-23.432, -46.469] }, { name: "Buenos Aires", coords: [-34.815, -58.534] }, 
+    { name: "Cairo", coords: [30.111, 31.406] }, { name: "Cape Town", coords: [-33.971, 18.602] }, 
+    { name: "Sydney", coords: [-33.939, 151.175] }, { name: "Dubai", coords: [25.253, 55.365] }, 
 ];
 
 // ==========================================
-// 4. OYUN MANTIĞI VE FONKSİYONLAR
+// 4. OYUN FONKSİYONLARI (KORUMALI MOD)
 // ==========================================
-
 function getRandomInt(max) { return Math.floor(Math.random() * max); }
+function getAngleDifference(a, b) { let d = Math.abs(a - b); return Math.min(d, 360 - d); }
 
-function getAngleDifference(angle1, angle2) {
-    let diff = Math.abs(angle1 - angle2);
-    return Math.min(diff, 360 - diff);
+function calculateCorrectBearing(start, end) {
+    // Turf.js yüklenemezse oyunu çökertme, 0 döndür
+    if (typeof turf === 'undefined') { console.error("Turf.js yüklenemedi!"); return 0; }
+    try {
+        const s = turf.point([start[1], start[0]]);
+        const e = turf.point([end[1], end[0]]);
+        let b = turf.bearing(s, e);
+        return (b < 0) ? b + 360 : b;
+    } catch(err) { console.error("Bearing hatası:", err); return 0; }
 }
 
-function calculateCorrectBearing(startCoords, endCoords) {
-    // Turf.js yüklendi mi kontrolü
-    if (typeof turf === 'undefined') {
-        alert("HATA: Turf.js kütüphanesi yüklenemedi! İnternet bağlantınızı kontrol edin.");
-        return 0;
-    }
-    const startPoint = turf.point([startCoords[1], startCoords[0]]);
-    const endPoint = turf.point([endCoords[1], endCoords[0]]);
-    let bearing = turf.bearing(startPoint, endPoint);
-    if (bearing < 0) bearing += 360;
-    return bearing;
-}
-
-// --- OYUN BAŞLATMA ---
 window.startGame = function() {
-    console.log("Oyun Başlatılıyor...");
+    console.log("Oyun başladı!");
     gameActive = true;
     score = 0;
-
-    // --- YENİ: ROL TABANLI SÜRE AYARI ---
-    if (window.currentUserRole === 'admin') {
-        timeLeft = 9999;  // Admin: Sınırsız
-    } else if (window.currentUserRole === 'user') {
-        timeLeft = 90;    // Kayıtlı User: 1.5 Dakika
-    } else {
-        timeLeft = 60;    // Misafir: 1 Dakika
-    }
+    
+    // Süre Belirle
+    if (window.currentUserRole === 'admin') timeLeft = 9;
+    else if (window.currentUserRole === 'user') timeLeft = 90;
+    else timeLeft = 60;
 
     document.getElementById('score').innerText = score;
-    const timeDisplay = document.getElementById('time');
-    if(timeDisplay) {
-        timeDisplay.innerText = timeLeft;
-        timeDisplay.classList.remove('urgent');
-    }
-
     startNewRound();
     startTimer();
 };
@@ -228,138 +158,190 @@ function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timeLeft--;
-        const timeDisplay = document.getElementById('time');
-        if(timeDisplay) {
-            timeDisplay.innerText = timeLeft;
-            if (timeLeft <= 10) timeDisplay.classList.add('urgent');
+        const td = document.getElementById('time');
+        if(td) {
+            td.innerText = timeLeft;
+            if(timeLeft <= 10) td.classList.add('urgent');
+            else td.classList.remove('urgent');
         }
-        
-        if (timeLeft <= 0) {
-            endGame();
-        }
+        if (timeLeft <= 0) endGame();
     }, 1000);
 }
 
 function endGame() {
     gameActive = false;
     clearInterval(timerInterval);
-    
     document.getElementById('final-score-display').innerText = score;
-
-    // --- YENİ: MİSAFİR UYARISINI GÖSTER/GİZLE ---
-    if (window.currentUserRole === 'guest') {
-        document.getElementById('guest-warning').style.display = 'block';
-    } else {
-        document.getElementById('guest-warning').style.display = 'none';
-    }
-
+    
+    if (window.currentUserRole !== 'guest') saveScoreToDB(score);
+    document.getElementById('guest-warning').style.display = (window.currentUserRole === 'guest') ? 'block' : 'none';
     document.getElementById('game-over-modal').style.display = 'flex';
 }
 
-function checkAnswer(selectedHeading, selectedMarkerElement) {
+function checkAnswer(selectedHeading, el) {
+    console.log("Cevap kontrol ediliyor...", selectedHeading);
+    
+    // Tıklama koruması
     if (!gameActive || isProcessingAnswer) return;
     isProcessingAnswer = true;
     
-    let minDifference = 360;
-    let bestHeading = -1;
-    currentDeparture.runways.forEach(runway => {
-        const diff = getAngleDifference(runway.heading, correctBearing);
-        if (diff < minDifference) {
-            minDifference = diff;
-            bestHeading = runway.heading;
-        }
-    });
-
-    const selectedDifference = getAngleDifference(selectedHeading, correctBearing);
-    const isCorrect = selectedDifference <= minDifference + 0.1;
-
-    if (isCorrect) {
-        score += SCORE_CORRECT;
-        if (selectedMarkerElement) selectedMarkerElement.querySelector('.runway-arrow').classList.add('correct');
-    } else {
-        score -= SCORE_WRONG;
-        if (selectedMarkerElement) selectedMarkerElement.querySelector('.runway-arrow').classList.add('wrong');
-        
-        arrowMarkers.forEach(marker => {
-            if (marker.headingData === bestHeading) {
-                const el = marker.getElement();
-                if (el) el.querySelector('.runway-arrow').classList.add('correct');
-            }
+    try {
+        // En doğru pisti bul
+        let bestHeading = -1, minDiff = 360;
+        currentDeparture.runways.forEach(r => {
+            let d = getAngleDifference(r.heading, correctBearing);
+            if (d < minDiff) { minDiff = d; bestHeading = r.heading; }
         });
-    }
 
-    document.getElementById('score').innerText = score;
+        const isCorrect = getAngleDifference(selectedHeading, correctBearing) <= minDiff + 0.1;
+
+        if (isCorrect) {
+            console.log("Doğru!");
+            score += SCORE_CORRECT;
+            if(el) el.querySelector('.runway-arrow').classList.add('correct');
+        } else {
+            console.log("Yanlış!");
+            score -= SCORE_WRONG;
+            if(el) el.querySelector('.runway-arrow').classList.add('wrong');
+            // Doğru olanı da göster
+            arrowMarkers.forEach(m => {
+                if(m.headingData === bestHeading) {
+                    let elem = m.getElement();
+                    if(elem) elem.querySelector('.runway-arrow').classList.add('correct');
+                }
+            });
+        }
+        document.getElementById('score').innerText = score;
+
+    } catch(err) {
+        console.error("Cevap kontrolünde hata:", err);
+    }
     
-    setTimeout(() => {
-        isProcessingAnswer = false;
-        startNewRound();
+    // Her halükarda yeni tura geç
+    setTimeout(() => { 
+        isProcessingAnswer = false; 
+        startNewRound(); 
     }, FEEDBACK_DELAY);
 }
 
 function startNewRound() {
+    console.log("Yeni tur hazırlanıyor...");
     if (!gameActive) return;
 
-    arrowMarkers.forEach(marker => map.removeLayer(marker));
-    arrowMarkers = [];
-    if (targetMarker) {
-        map.removeLayer(targetMarker);
-        targetMarker = null;
-    }
+    try {
+        // Temizlik
+        arrowMarkers.forEach(m => map.removeLayer(m));
+        arrowMarkers = [];
+        if (targetMarker) { map.removeLayer(targetMarker); targetMarker = null; }
 
-    currentDeparture = airports[getRandomInt(airports.length)];
-    do {
-        currentTarget = targets[getRandomInt(targets.length)];
-    } while (
-        currentDeparture.coords[0] === currentTarget.coords[0] && 
-        currentDeparture.coords[1] === currentTarget.coords[1]
-    );
+        // Yeni Rota
+        currentDeparture = airports[getRandomInt(airports.length)];
+        do { currentTarget = targets[getRandomInt(targets.length)]; } 
+        while (currentDeparture === currentTarget);
 
-    const depDisplay = document.getElementById('departure-display');
-    const tarDisplay = document.getElementById('target-display');
-    
-    if(depDisplay) depDisplay.innerText = `Kalkış: ${currentDeparture.name}`;
-    if(tarDisplay) tarDisplay.innerText = `Hedef: ${currentTarget.name}`;
-    
-    map.flyTo(currentDeparture.coords, currentDeparture.zoom, { animate: true, duration: 1.5 });
-    
-    targetMarker = L.marker(currentTarget.coords).addTo(map)
-        .bindPopup(`<b>Hedef:</b> ${currentTarget.name}`);
+        document.getElementById('departure-display').innerText = `Kalkış: ${currentDeparture.name}`;
+        document.getElementById('target-display').innerText = `Hedef: ${currentTarget.name}`;
+        
+        map.flyTo(currentDeparture.coords, currentDeparture.zoom, { animate: true, duration: 1.5 });
+        
+        targetMarker = L.marker(currentTarget.coords).addTo(map).bindPopup(currentTarget.name);
+        correctBearing = calculateCorrectBearing(currentDeparture.coords, currentTarget.coords);
 
-    correctBearing = calculateCorrectBearing(currentDeparture.coords, currentTarget.coords);
-
-    currentDeparture.runways.forEach(runway => {
-        const arrowHtml = `<i class="fa-solid fa-arrow-up arrow-icon" style="transform: rotate(${runway.heading}deg);"></i>`;
-        const icon = L.divIcon({
-            className: 'runway-marker-container',
-            html: `<div class="runway-arrow">${arrowHtml}</div>`,
-            iconSize: [60, 60],
-            iconAnchor: [30, 30]
+        // Markerları ekle
+        currentDeparture.runways.forEach(r => {
+            const icon = L.divIcon({
+                className: 'runway-marker-container',
+                html: `<div class="runway-arrow"><i class="fa-solid fa-arrow-up arrow-icon" style="transform: rotate(${r.heading}deg);"></i></div>`,
+                iconSize: [60, 60], iconAnchor: [30, 30]
+            });
+            const m = L.marker(r.coords, { icon: icon }).addTo(map);
+            m.headingData = r.heading;
+            
+            // Tıklama Olayı (Daha güvenli yöntem)
+            m.on('click', (e) => {
+                // Elementi güvenli şekilde al
+                let element = e.target.getElement(); 
+                checkAnswer(r.heading, element);
+            });
+            
+            arrowMarkers.push(m);
         });
-
-        const marker = L.marker(runway.coords, { icon: icon }).addTo(map);
-        marker.headingData = runway.heading;
-        marker.on('click', (e) => checkAnswer(runway.heading, e.target.getElement()));
-        arrowMarkers.push(marker);
-    });
+    } catch(err) {
+        console.error("Yeni tur hatası:", err);
+    }
 }
 
 // ==========================================
-// 5. SAYFA YÜKLENİNCE HARİTAYI KUR (ÖNEMLİ KISIM)
+// 5. MODAL İŞLEMLERİ
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-    // Haritayı "Güvenli" bir şekilde oluştur
-    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20, 0], 2);
-    L.control.zoom({ position: 'topright' }).addTo(map);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 18,
-        attribution: 'Tiles &copy; Esri'
-    }).addTo(map);
-
-    console.log("Harita başarıyla oluşturuldu.");
-});
-
-// --- YENİ: EĞİTİM EKRANINI KAPAT VE OYUNU BAŞLAT ---
 window.closeTutorialAndStart = function() {
-    document.getElementById('tutorial-modal').style.display = 'none'; // Ekranı kapat
-    window.startGame(); // Asıl oyunu şimdi başlat
+    document.getElementById('tutorial-modal').style.display = 'none';
+    window.startGame();
+};
+
+window.closeLeaderboard = function() {
+    document.getElementById('leaderboard-modal').style.display = 'none';
+    document.getElementById('game-over-modal').style.display = 'flex';
+};
+
+// ... Diğer veritabanı fonksiyonları (saveScore, showLeaderboard vs.) ...
+// Onları önceki koddan aynen alabilirsin veya buraya ekleyebilirim ama 
+// şimdilik oyunun çalışması en önemlisi.
+
+async function saveScoreToDB(finalScore) {
+    if (window.currentUserRole === 'guest') return;
+    const rawName = document.getElementById('player-name').innerText;
+    const username = rawName.split(' (')[0]; 
+    try {
+        await fetch(`${API_URL}/score`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, score: finalScore })
+        });
+    } catch (e) { console.error(e); }
+}
+
+async function showLeaderboard() {
+    const listBody = document.getElementById('leaderboard-list');
+    listBody.innerHTML = '<tr><td colspan="3">Yükleniyor...</td></tr>';
+    document.getElementById('game-over-modal').style.display = 'none';
+    document.getElementById('leaderboard-modal').style.display = 'flex';
+
+    try {
+        const res = await fetch(`${API_URL}/leaderboard`);
+        const players = await res.json();
+        listBody.innerHTML = ''; 
+        players.forEach((p, i) => {
+            let medal = (i===0)?'🥇':(i===1)?'🥈':(i===2)?'🥉':'';
+            // SİLME BUTONU: Sadece Adminse göster
+            let deleteBtn = '';
+            if (window.currentUserRole === 'admin') {
+                deleteBtn = `<button onclick="deleteUser('${p.username}')" style="margin-left:10px; color:red; cursor:pointer;">Sil</button>`;
+            }
+            listBody.innerHTML += `<tr><td>${medal} ${i + 1}</td><td>${p.username}</td><td><b>${p.highScore}</b> ${deleteBtn}</td></tr>`;
+        });
+    } catch (e) { listBody.innerHTML = '<tr><td colspan="3">Hata!</td></tr>'; }
+}
+
+window.showLeaderboardFromLogin = async function() {
+    document.getElementById('auth-panel').style.display = 'none';
+    await showLeaderboard(); 
+    const backBtn = document.querySelector('#leaderboard-modal button');
+    backBtn.onclick = function() {
+        document.getElementById('leaderboard-modal').style.display = 'none';
+        document.getElementById('auth-panel').style.display = 'flex';
+        backBtn.onclick = window.closeLeaderboard; 
+    };
+};
+
+window.deleteUser = async function(target) {
+    if(!confirm('Silinsin mi?')) return;
+    const admin = document.getElementById('player-name').innerText.split(' (')[0];
+    try {
+        const res = await fetch(`${API_URL}/delete/${target}`, {
+            method: 'DELETE', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ adminUsername: admin })
+        });
+        if(res.ok) showLeaderboard();
+        else alert('Hata');
+    } catch(e) { alert('Hata'); }
 };

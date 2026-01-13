@@ -6,7 +6,7 @@ body, html {
     overflow: hidden;
 }
 
-/* --- GİRİŞ & OYUN SONU MODALLERİ --- */
+/* --- GİRİŞ & OYUN SONU EKRANLARI --- */
 #auth-panel, .modal-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -14,7 +14,7 @@ body, html {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
+    z-index: 9999; /* En üstte */
 }
 
 .auth-box, .modal-box {
@@ -43,64 +43,56 @@ body, html {
 .btn-secondary { background-color: #3498db; }
 .btn-secondary:hover { background-color: #2980b9; }
 
-/* --- HARİTA --- */
-#game-container { width: 100%; height: 100%; position: relative; }
-#map { height: 100vh; width: 100%; z-index: 1; }
+/* --- HARİTA KONTEYNERİ --- */
+#game-container { 
+    width: 100%; 
+    height: 100%; 
+    position: relative; 
+}
+#map { 
+    height: 100vh; 
+    width: 100%; 
+    z-index: 1; 
+}
 
-/* --- BİLGİ PANELİ (GÜNCELLENMİŞ - DAHA BÜYÜK) --- */
+/* --- BİLGİ PANELİ (GÜNCELLENMİŞ) --- */
 #info-panel {
     position: absolute;
-    top: 25px; /* Biraz daha aşağı indi */
+    top: 25px;
     left: 50%;
     transform: translateX(-50%);
     
-    background: rgba(44, 62, 80, 0.9); /* Biraz daha koyu */
+    background: rgba(44, 62, 80, 0.9);
     color: white;
     
-    /* BURALAR BÜYÜDÜ: */
-    padding: 20px 40px; 
-    border-radius: 60px;
-    min-width: 700px; 
+    padding: 15px 30px; 
+    border-radius: 50px;
+    min-width: 600px; /* Genişlik */
     
     display: flex;
-    gap: 35px; /* Araları açıldı */
+    gap: 25px; /* Elemanlar arası boşluk */
     align-items: center;
     justify-content: center;
     
     z-index: 1000;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.6); /* Gölge arttı */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6);
     backdrop-filter: blur(8px);
-    border: 2px solid rgba(255,255,255,0.15); /* Kenarlık kalınlaştı */
+    border: 2px solid rgba(255,255,255,0.15);
 }
 
-/* Bilgileri yan yana diziyoruz */
-#info-panel p { margin: 0; font-size: 1.2rem; font-weight: 600; white-space: nowrap; } /* Yazı boyutu arttı */
+/* Bilgi Yazıları */
+#info-panel p { margin: 0; font-size: 1.1rem; font-weight: 600; white-space: nowrap; }
 #info-panel span { font-weight: bold; color: #f1c40f; margin-left: 8px; }
 
-/* Başlıkları gizlemeye devam */
+/* Başlıkları gizle (Sade tasarım için) */
 #info-panel h3, #player-name-container { display: none; } 
 
-/* Kalkış ve Hedef renkleri */
+/* Renkler */
 #departure-display { color: #5dade2 !important; text-shadow: 0 0 10px rgba(52, 152, 219, 0.5); }
 #target-display { color: #e74c3c !important; text-shadow: 0 0 10px rgba(231, 76, 60, 0.5); }
 
-/* Diğer CSS kodların aynen kalsın... */
-
-/* Bilgileri yan yana diziyoruz */
-#info-panel p { margin: 0; font-size: 1rem; font-weight: 500; white-space: nowrap; }
-#info-panel span { font-weight: bold; color: #f1c40f; margin-left: 5px; }
-
-/* "Uçuş Bilgileri" başlığını ve oyuncu adını gizleyip sadeleştirelim veya küçültelim */
-#info-panel h3, #player-name-container { display: none; } 
-
-/* Kalkış ve Hedef renkleri */
-#departure-display { color: #3498db !important; }
-#target-display { color: #e74c3c !important; }
-
-/* Feedback (Doğru/Yanlış yazısı) */
-.feedback { position: absolute; bottom: -30px; width: 100%; text-align: center; font-weight: bold; text-shadow: 0 0 5px black; }
-
-/* Süre Kritikleşince */
+/* Feedback ve Uyarılar */
+.feedback { position: absolute; bottom: -40px; width: 100%; text-align: center; font-weight: bold; text-shadow: 0 0 5px black; font-size: 1.2rem; }
 .urgent { color: #e74c3c !important; animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: 0.5; } }
 
