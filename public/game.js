@@ -1,7 +1,7 @@
 // ==========================================
 // 1. KİMLİK DOĞRULAMA (AUTH) SİSTEMİ
 // ==========================================
-const API_URL = 'http://localhost:3000/api/auth';
+const API_URL = 'http://56.228.7.59:3000/api/auth';
 window.currentUserRole = 'guest'; 
 
 // --- HARİTA BAŞLATMA ---
@@ -123,7 +123,7 @@ const targets = [
 ];
 
 // ==========================================
-// 4. OYUN FONKSİYONLARI (KORUMALI MOD)
+// 4. OYUN FONKSİYONLARI
 // ==========================================
 function getRandomInt(max) { return Math.floor(Math.random() * max); }
 function getAngleDifference(a, b) { let d = Math.abs(a - b); return Math.min(d, 360 - d); }
@@ -145,7 +145,7 @@ window.startGame = function() {
     score = 0;
     
     // Süre Belirle
-    if (window.currentUserRole === 'admin') timeLeft = 9;
+    if (window.currentUserRole === 'admin') timeLeft = 999;
     else if (window.currentUserRole === 'user') timeLeft = 90;
     else timeLeft = 60;
 
@@ -257,7 +257,7 @@ function startNewRound() {
             const m = L.marker(r.coords, { icon: icon }).addTo(map);
             m.headingData = r.heading;
             
-            // Tıklama Olayı (Daha güvenli yöntem)
+            // Tıklama Olayı
             m.on('click', (e) => {
                 // Elementi güvenli şekilde al
                 let element = e.target.getElement(); 
@@ -285,8 +285,7 @@ window.closeLeaderboard = function() {
 };
 
 // ... Diğer veritabanı fonksiyonları (saveScore, showLeaderboard vs.) ...
-// Onları önceki koddan aynen alabilirsin veya buraya ekleyebilirim ama 
-// şimdilik oyunun çalışması en önemlisi.
+
 
 async function saveScoreToDB(finalScore) {
     if (window.currentUserRole === 'guest') return;

@@ -55,7 +55,7 @@ body, html {
     z-index: 1; 
 }
 
-/* --- BİLGİ PANELİ (GÜNCELLENMİŞ) --- */
+/* --- BİLGİ PANELİ --- */
 #info-panel {
     position: absolute;
     top: 25px;
@@ -84,7 +84,7 @@ body, html {
 #info-panel p { margin: 0; font-size: 1.1rem; font-weight: 600; white-space: nowrap; }
 #info-panel span { font-weight: bold; color: #f1c40f; margin-left: 8px; }
 
-/* Başlıkları gizle (Sade tasarım için) */
+/* Başlıkları gizle */
 #info-panel h3, #player-name-container { display: none; } 
 
 /* Renkler */

@@ -15,7 +15,7 @@ const UserSchema = new mongoose.Schema({
         enum: ['user', 'admin'], 
         default: 'user' 
     },
-    // --- YENİ EKLENEN KISIM ---
+    
     highScore: { 
         type: Number, 
         default: 0 // Başlangıçta herkesin skoru 0

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-const User = require('../models/user'); // Modelimizi çağırıyoruz
+const User = require('../models/User'); 
 
 // ==========================================
 // 1. KAYIT OL (REGISTER)
@@ -19,7 +19,7 @@ router.post('/register', async (req, res) => {
         // Şifreyi gizle (Hash)
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Yeni kullanıcıyı oluştur (Herkesi zorla 'user' yapıyoruz, hata çıkmasın)
+        // Yeni kullanıcıyı oluştur 
         const newUser = new User({
             username,
             password: hashedPassword,
@@ -114,7 +114,6 @@ router.delete('/delete/:username', async (req, res) => {
         const targetUsername = req.params.username; // Silinecek kişi
         const { adminUsername } = req.body; // Emri veren kişi
 
-        // Emri vereni kontrol et: Gerçekten Admin mi?
         const requester = await User.findOne({ username: adminUsername });
         if (!requester || requester.role !== 'admin') {
             return res.status(403).json({ message: 'Buna yetkiniz yok!' });
